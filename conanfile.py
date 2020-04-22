@@ -1,6 +1,7 @@
 import os
 
 from conans import ConanFile, CMake, tools
+from conans.errors import ConanInvalidConfiguration
 
 class ShadercConan(ConanFile):
     name = "shaderc"
@@ -12,8 +13,16 @@ class ShadercConan(ConanFile):
     exports_sources = ["CMakeLists.txt", "patches/**"]
     generators = "cmake"
     settings = "os", "arch", "compiler", "build_type"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": False, "fPIC": True}
+    options = {
+        "shared": [True, False],
+        "fPIC": [True, False],
+        "spvc": [True, False]
+    }
+    default_options = {
+        "shared": False,
+        "fPIC": True,
+        "spvc": True
+    }
 
     _cmake = None
 
@@ -36,8 +45,8 @@ class ShadercConan(ConanFile):
     def requirements(self):
         self.requires.add("glslang/8.13.3559")
         self.requires.add("spirv-tools/2020.1")
-        # if self.options.spvc:
-        #    self.requires.add("spirv-cross/20200403")
+        if self.options.spvc:
+           self.requires.add("spirv-cross/20200403")
 
     def source(self):
         tools.get(**self.conan_data["sources"][self.version])
@@ -53,7 +62,7 @@ class ShadercConan(ConanFile):
         if self._cmake:
             return self._cmake
         self._cmake = CMake(self)
-        self._cmake.definitions["SHADERC_ENABLE_SPVC"] = False # spvc depends on private headers of SPIRV-Tools, making it hard to enable for conan
+        self._cmake.definitions["SHADERC_ENABLE_SPVC"] = self.options.spvc
         self._cmake.definitions["SHADERC_SKIP_INSTALL"] = False
         self._cmake.definitions["SHADERC_SKIP_TESTS"] = True
         self._cmake.definitions["SHADERC_SPVC_ENABLE_DIRECT_LOGGING"] = False
@@ -72,9 +81,17 @@ class ShadercConan(ConanFile):
         tools.rmdir(os.path.join(self.package_folder, "lib", "pkgconfig"))
 
     def package_info(self):
-        self.cpp_info.libs = tools.collect_libs(self)
+        self.cpp_info.libs = self._get_ordered_libs()
         if self.settings.os == "Linux":
             self.cpp_info.system_libs.append("pthread")
         if self.options.shared:
             self.cpp_info.defines.append("SHADERC_SHAREDLIB")
         self.env_info.PATH.append(os.path.join(self.package_folder, "bin"))
+
+    def _get_ordered_libs(self):
+        libs = ["shaderc"]
+        if not self.options.shared:
+            libs.append("shaderc_util")
+        if self.options.spvc:
+            libs.append("shaderc_spvc")
+        return libs

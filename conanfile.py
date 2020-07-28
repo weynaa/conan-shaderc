@@ -87,6 +87,8 @@ class ShadercConan(ConanFile):
         self.cpp_info.libs = self._get_ordered_libs()
         if self.settings.os == "Linux":
             self.cpp_info.system_libs.append("pthread")
+        if not self.options.shared and tools.stdcpp_library(self):
+            self.cpp_info.system_libs.append(tools.stdcpp_library(self))
         if self.options.shared:
             self.cpp_info.defines.append("SHADERC_SHAREDLIB")
 

@@ -30,6 +30,3 @@ class TestPackageConan(ConanFile):
                 self.run(bin_path_spvc_c, run_environment=True)
                 bin_path_spvc_cpp = os.path.join("bin", "test_package_spvc_cpp")
                 self.run(bin_path_spvc_cpp, run_environment=True)
-                # Test spvc executable
-                # out_glsl_name = "test_package.vert"
-                # self.run("spvc -o {1} {0}".format(spv_name, out_glsl_name), run_environment=True)

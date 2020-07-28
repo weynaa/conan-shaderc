@@ -1,7 +1,6 @@
 import os
 
 from conans import ConanFile, CMake, tools
-from conans.errors import ConanInvalidConfiguration
 
 class ShadercConan(ConanFile):
     name = "shaderc"
@@ -44,9 +43,9 @@ class ShadercConan(ConanFile):
 
     def requirements(self):
         self.requires.add("glslang/8.13.3559")
-        self.requires.add("spirv-tools/2020.1")
+        self.requires.add("spirv-tools/v2020.3")
         if self.options.spvc:
-           self.requires.add("spirv-cross/20200403")
+           self.requires.add("spirv-cross/20200519")
 
     def source(self):
         tools.get(**self.conan_data["sources"][self.version])

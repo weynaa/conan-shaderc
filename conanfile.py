@@ -1,12 +1,12 @@
 import os
 
 from conans import ConanFile, CMake, tools
-
+import shutil
 class ShadercConan(ConanFile):
     name = "shaderc"
     description = "A collection of tools, libraries and tests for shader compilation."
     license = "Apache-2.0"
-    topics = ("conan", "shaderc", "glsl", "hlsl", "msl", "spirv", "spir-v", "glslc", "spvc")
+    topics = ("conan", "shaderc", "glsl", "hlsl", "msl", "spirv", "spir-v", "glslc")
     homepage = "https://github.com/google/shaderc"
     url = "https://github.com/conan-io/conan-center-index"
     exports_sources = ["CMakeLists.txt", "patches/**"]
@@ -15,14 +15,11 @@ class ShadercConan(ConanFile):
     options = {
         "shared": [True, False],
         "fPIC": [True, False],
-        "spvc": [True, False]
     }
     default_options = {
         "shared": False,
         "fPIC": True,
-        "spvc": True
     }
-
     _cmake = None
 
     @property
@@ -37,25 +34,17 @@ class ShadercConan(ConanFile):
         if self.settings.os == "Windows":
             del self.options.fPIC
 
+    def source(self):
+        self.run("git clone --recursive https://github.com/google/shaderc && cd shaderc && git checkout {} && python utils/git-sync-deps".format(self.version))
+        shutil.move("shaderc",self._source_subfolder)
+
     def configure(self):
         if self.options.shared:
             del self.options.fPIC
         if self.settings.compiler.cppstd:
             tools.check_min_cppstd(self, 11)
 
-    def requirements(self):
-        self.requires("glslang/8.13.3559")
-        self.requires("spirv-tools/v2020.3")
-        if self.options.spvc:
-           self.requires("spirv-cross/20200629")
-
-    def source(self):
-        tools.get(**self.conan_data["sources"][self.version])
-        os.rename(self.name + "-" + self.version, self._source_subfolder)
-
     def build(self):
-        for patch in self.conan_data.get("patches", {}).get(self.version, []):
-            tools.patch(**patch)
         cmake = self._configure_cmake()
         cmake.build()
 
@@ -64,16 +53,13 @@ class ShadercConan(ConanFile):
             return self._cmake
         self._cmake = CMake(self)
         self._cmake.definitions["CMAKE_POSITION_INDEPENDENT_CODE"] = self.options.get_safe("fPIC", True)
-        self._cmake.definitions["SHADERC_ENABLE_SPVC"] = self.options.spvc
         self._cmake.definitions["SHADERC_SKIP_INSTALL"] = False
         self._cmake.definitions["SHADERC_SKIP_TESTS"] = True
-        self._cmake.definitions["SHADERC_SPVC_ENABLE_DIRECT_LOGGING"] = False
-        self._cmake.definitions["SHADERC_SPVC_DISABLE_CONTEXT_LOGGING"] = False
         self._cmake.definitions["SHADERC_ENABLE_WERROR_COMPILE"] = False
         if self.settings.compiler == "Visual Studio":
             self._cmake.definitions["SHADERC_ENABLE_SHARED_CRT"] = str(self.settings.compiler.runtime).startswith("MD")
         self._cmake.definitions["ENABLE_CODE_COVERAGE"] = False
-        self._cmake.configure(build_folder=self._build_subfolder)
+        self._cmake.configure(build_folder=self._build_subfolder, source_folder=self._source_subfolder)
         return self._cmake
 
     def package(self):
@@ -94,12 +80,10 @@ class ShadercConan(ConanFile):
 
         bin_path = os.path.join(self.package_folder, "bin")
         self.output.info("Appending PATH environment variable: {}".format(bin_path))
-        self.env_info.PATH.append(bin_path)
+        #self.env_info.path.append(bin_path)
 
     def _get_ordered_libs(self):
         libs = ["shaderc_shared" if self.options.shared else "shaderc"]
         if not self.options.shared:
-            libs.append("shaderc_util")
-        if self.options.spvc:
-            libs.append("shaderc_spvc_shared" if self.options.shared else "shaderc_spvc")
+            libs.append("shaderc_combined")
         return libs

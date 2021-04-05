@@ -56,6 +56,7 @@ class ShadercConan(ConanFile):
         self._cmake.definitions["SHADERC_SKIP_INSTALL"] = False
         self._cmake.definitions["SHADERC_SKIP_TESTS"] = True
         self._cmake.definitions["SHADERC_ENABLE_WERROR_COMPILE"] = False
+        self._cmake.definitions["BUILD_SHARED_LIBS"] = False
         if self.settings.compiler == "Visual Studio":
             self._cmake.definitions["SHADERC_ENABLE_SHARED_CRT"] = str(self.settings.compiler.runtime).startswith("MD")
         self._cmake.definitions["ENABLE_CODE_COVERAGE"] = False
